@@ -1,2 +1,5 @@
+"""контра пайлинта."""
 def text():
-    return message
+    """ещё контра пайлинта."""
+    return "Hello World"
+print(text())
