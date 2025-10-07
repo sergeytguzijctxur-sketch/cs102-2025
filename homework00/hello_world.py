@@ -1,9 +1,9 @@
-"""контра пайлинта."""
-
+"""Модуль для работы с текстовыми функциями."""
 
 def text():
-    """ещё контра пайлинта."""
-    return "Hello World"
+    """Возвращает строку 'message'.
 
-
-print(text())
+    Returns:
+        str: Строка 'message'
+    """
+    return "message
