@@ -1,5 +1,5 @@
 import random
-import typing as tp
+from typing import Tuple, List
 
 
 def is_prime(n: int) -> bool:
@@ -12,30 +12,32 @@ def is_prime(n: int) -> bool:
     >>> is_prime(8)
     False
     """
-
-    def is_prime(n: int) -> bool:
-        if n <= 1:
-            return False
-        if n <= 3:
-            return True
-        if n % 2 == 0 or n % 3 == 0:
-            return False
-
-        i = 5
-        while i * i <= n:
-            if n % i == 0 or n % (i + 2) == 0:
-                return False
-            i += 6
-
+    if n <= 1:
+        return False
+    if n <= 3:
         return True
-    pass
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+
+    return True
 
 
 def gcd(a: int, b: int) -> int:
+    """
+    >>> gcd(12, 15)
+    3
+    >>> gcd(3, 7)
+    1
+    """
     while b != 0:
         a, b = b, a % b
     return abs(a)
-    pass
 
 
 def multiplicative_inverse(e: int, phi: int) -> int:
@@ -45,8 +47,15 @@ def multiplicative_inverse(e: int, phi: int) -> int:
     >>> multiplicative_inverse(7, 40)
     23
     """
-    # PUT YOUR CODE HERE
-    pass
+    original_phi = phi
+    x0, x1 = 1, 0
+
+    while phi > 0:
+        q = e // phi
+        e, phi = phi, e % phi
+        x0, x1 = x1, x0 - q * x1
+
+    return x0 % original_phi
 
 
 def generate_keypair(p: int, q: int) -> Tuple[Tuple[int, int], Tuple[int, int]]:
@@ -69,7 +78,8 @@ def generate_keypair(p: int, q: int) -> Tuple[Tuple[int, int], Tuple[int, int]]:
 
     return ((e, n), (d, n))
 
-def encrypt(pk: tp.Tuple[int, int], plaintext: str) -> tp.List[int]:
+
+def encrypt(pk: Tuple[int, int], plaintext: str) -> List[int]:
     # Unpack the key into it's components
     key, n = pk
     # Convert each letter in the plaintext to numbers based on
@@ -79,7 +89,7 @@ def encrypt(pk: tp.Tuple[int, int], plaintext: str) -> tp.List[int]:
     return cipher
 
 
-def decrypt(pk: tp.Tuple[int, int], ciphertext: tp.List[int]) -> str:
+def decrypt(pk: Tuple[int, int], ciphertext: List[int]) -> str:
     # Unpack the key into its components
     key, n = pk
     # Generate the plaintext based on the ciphertext and key using a^b mod m
