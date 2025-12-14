@@ -2,163 +2,182 @@ from copy import deepcopy
 from random import choice, randint
 from typing import List, Optional, Tuple, Union
 
+import pandas as pd
+
 
 def create_grid(rows: int = 15, cols: int = 15) -> List[List[Union[str, int]]]:
     return [["■"] * cols for _ in range(rows)]
 
 
-def remove_wall(
-        grid: List[List[Union[str, int]]], coord: Tuple[int, int]
-) -> List[List[Union[str, int]]]:
+def remove_wall(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> List[List[Union[str, int]]]:
     x, y = coord
-    if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
-        grid[x][y] = " "
+    grid[x][y] = " "
     return grid
 
 
-def bin_tree_maze(
-        rows: int = 15, cols: int = 15, random_exit: bool = True
-) -> List[List[Union[str, int]]]:
+def bin_tree_maze(rows: int = 15, cols: int = 15, random_exit: bool = True) -> List[List[Union[str, int]]]:
     if rows < 5 or cols < 5:
-        rows, cols = max(5, rows), max(5, cols)
+        raise ValueError("Лабиринт должен быть минимум 5x5")
 
     grid = create_grid(rows, cols)
-    empty_cells = []
+    empty_cells: List[Tuple[int, int]] = []
 
-    for x in range(1, rows - 1, 2):
-        for y in range(1, cols - 1, 2):
-            grid[x][y] = " "
-            empty_cells.append((x, y))
+    for x, row in enumerate(grid):
+        for y, _ in enumerate(row):
+            if x % 2 == 1 and y % 2 == 1:
+                grid[x][y] = " "
+                empty_cells.append((x, y))
 
     for x, y in empty_cells:
-        directions = []
+        directions: List[Tuple[int, int]] = []
 
-        if x - 1 > 0:
+        if x - 2 >= 1:
             directions.append((-1, 0))
-        if y + 1 < cols - 1:
+        if y + 2 < cols - 1:
             directions.append((0, 1))
 
         if directions:
             dx, dy = choice(directions)
             grid = remove_wall(grid, (x + dx, y + dy))
 
-    exits = []
-    while len(exits) < 2:
-        if random_exit:
-            side = choice(['top', 'bottom', 'left', 'right'])
-            if side == 'top':
-                x, y = 0, randint(0, cols - 1)
-            elif side == 'bottom':
-                x, y = rows - 1, randint(0, cols - 1)
-            elif side == 'left':
-                x, y = randint(0, rows - 1), 0
-            else:
-                x, y = randint(0, rows - 1), cols - 1
+    if random_exit:
+        side_in = choice(["top", "bottom", "left", "right"])
+        if side_in == "top":
+            x_in, y_in = 0, randint(1, cols - 2)
+        elif side_in == "bottom":
+            x_in, y_in = rows - 1, randint(1, cols - 2)
+        elif side_in == "left":
+            x_in, y_in = randint(1, rows - 2), 0
         else:
-            if len(exits) == 0:
-                x, y = 0, cols - 2
-            else:
-                x, y = rows - 1, 1
+            x_in, y_in = randint(1, rows - 2), cols - 1
 
-        if (x, y) not in exits:
-            grid[x][y] = "X"
-            exits.append((x, y))
+        side_out = choice([s for s in ["top", "bottom", "left", "right"] if s != side_in])
+        if side_out == "top":
+            x_out, y_out = 0, randint(1, cols - 2)
+        elif side_out == "bottom":
+            x_out, y_out = rows - 1, randint(1, cols - 2)
+        elif side_out == "left":
+            x_out, y_out = randint(1, rows - 2), 0
+        else:
+            x_out, y_out = randint(1, rows - 2), cols - 1
+    else:
+        x_in, y_in = 0, cols - 2
+        x_out, y_out = rows - 1, 1
+
+    grid[x_in][y_in], grid[x_out][y_out] = "X", "X"
 
     return grid
 
 
 def get_exits(grid: List[List[Union[str, int]]]) -> List[Tuple[int, int]]:
-    exits = []
-    for x, row in enumerate(grid):
-        for y, cell in enumerate(row):
-            if cell == "X":
-                exits.append((x, y))
+    exits: List[Tuple[int, int]] = []
+    rows = len(grid)
+    cols = len(grid[0])
+
+    for i in range(rows):
+        for j in range(cols):
+            if grid[i][j] == "X":
+                exits.append((i, j))
+
     return exits
 
 
 def make_step(grid: List[List[Union[str, int]]], k: int) -> List[List[Union[str, int]]]:
-    rows, cols = len(grid), len(grid[0])
+    rows = len(grid)
+    cols = len(grid[0])
     new_grid = deepcopy(grid)
 
-    for x in range(rows):
-        for y in range(cols):
-            if grid[x][y] == k:
+    for i in range(rows):
+        for j in range(cols):
+            if grid[i][j] == k:
                 for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < rows and 0 <= ny < cols:
-                        if grid[nx][ny] in [" ", "X"]:
-                            new_grid[nx][ny] = k + 1
+                    ni, nj = i + dx, j + dy
+                    if 0 <= ni < rows and 0 <= nj < cols:
+                        if grid[ni][nj] == " " or grid[ni][nj] == "X":
+                            new_grid[ni][nj] = k + 1
+                        elif grid[ni][nj] == 0:
+                            new_grid[ni][nj] = k + 1
 
     return new_grid
 
 
 def shortest_path(
-        grid: List[List[Union[str, int]]], exit_coord: Tuple[int, int]
+    grid: List[List[Union[str, int]]], exit_coord: Tuple[int, int]
 ) -> Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]:
     if not exit_coord:
         return None
 
-    rows, cols = len(grid), len(grid[0])
-    exits = get_exits(grid)
+    if encircled_exit(grid, exit_coord):
+        return exit_coord
 
-    if len(exits) != 2:
-        return None
-
-    start = [e for e in exits if e != exit_coord][0]
+    rows = len(grid)
+    cols = len(grid[0])
+    exit_x, exit_y = exit_coord
 
     wave_grid = deepcopy(grid)
-    for x in range(rows):
-        for y in range(cols):
-            if isinstance(wave_grid[x][y], int):
-                wave_grid[x][y] = " "
+    for i in range(rows):
+        for j in range(cols):
+            if isinstance(wave_grid[i][j], int):
+                wave_grid[i][j] = " "
 
-    wave_grid[exit_coord[0]][exit_coord[1]] = 1
+    wave_grid[exit_x][exit_y] = 1
+    k = 1
+    changed = True
 
-    step = 1
-    while True:
-        wave_grid = make_step(wave_grid, step)
-        step += 1
+    while changed:
+        changed = False
+        for i in range(rows):
+            for j in range(cols):
+                if isinstance(wave_grid[i][j], int) and wave_grid[i][j] == k:
+                    for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                        ni, nj = i + dx, j + dy
+                        if 0 <= ni < rows and 0 <= nj < cols:
+                            if wave_grid[ni][nj] == " ":
+                                wave_grid[ni][nj] = k + 1
+                                changed = True
 
-        start_val = wave_grid[start[0]][start[1]]
-        if isinstance(start_val, int) and start_val > 1:
-            break
+        if changed:
+            k += 1
 
-        all_done = True
-        for x in range(rows):
-            for y in range(cols):
-                if wave_grid[x][y] == step:
-                    all_done = False
-                    break
-            if not all_done:
-                break
-
-        if all_done:
-            break
-
-    if not isinstance(wave_grid[start[0]][start[1]], int):
+    exits = get_exits(grid)
+    if len(exits) < 2:
         return None
 
-    path = [start]
-    current = start
+    start_exit = [e for e in exits if e != exit_coord][0]
+    sx, sy = start_exit
+
+    if not isinstance(wave_grid[sx][sy], int):
+        return None
+
+    path = [start_exit]
+    current = start_exit
 
     while current != exit_coord:
-        x, y = current
-        current_val = wave_grid[x][y]
+        cx, cy = current
+        current_value = wave_grid[cx][cy]
+        if not isinstance(current_value, int):
+            break
 
+        found_next = False
         for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-            nx, ny = x + dx, y + dy
+            nx, ny = cx + dx, cy + dy
             if 0 <= nx < rows and 0 <= ny < cols:
-                if isinstance(wave_grid[nx][ny], int) and wave_grid[nx][ny] == current_val - 1:
+                if isinstance(wave_grid[nx][ny], int) and wave_grid[nx][ny] == current_value - 1:
                     path.append((nx, ny))
                     current = (nx, ny)
+                    found_next = True
                     break
+
+        if not found_next:
+            break
 
     return path
 
 
 def encircled_exit(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> bool:
     x, y = coord
-    rows, cols = len(grid), len(grid[0])
+    rows = len(grid)
+    cols = len(grid[0])
 
     for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
         nx, ny = x + dx, y + dy
@@ -169,24 +188,26 @@ def encircled_exit(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) ->
 
 
 def solve_maze(
-        grid: List[List[Union[str, int]]],
+    grid: List[List[Union[str, int]]],
 ) -> Tuple[List[List[Union[str, int]]], Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]]:
     exits = get_exits(grid)
 
     if len(exits) != 2:
         return grid, None
 
+    if any(encircled_exit(grid, exit_coord) for exit_coord in exits):
+        return grid, None
+
     for exit_coord in exits:
-        if not encircled_exit(grid, exit_coord):
-            path = shortest_path(grid, exit_coord)
-            if path and isinstance(path, list) and len(path) > 0:
-                return grid, path
+        path = shortest_path(grid, exit_coord)
+        if path and isinstance(path, list) and len(path) > 1:
+            return grid, path
 
     return grid, None
 
 
 def add_path_to_grid(
-        grid: List[List[Union[str, int]]], path: Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]
+    grid: List[List[Union[str, int]]], path: Optional[Union[Tuple[int, int], List[Tuple[int, int]]]]
 ) -> List[List[Union[str, int]]]:
     if not path:
         return grid
@@ -195,48 +216,21 @@ def add_path_to_grid(
 
     if isinstance(path, tuple):
         x, y = path
-        if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
-            result_grid[x][y] = "X"
-    elif isinstance(path, list):
+        result_grid[x][y] = "X"
+    else:
         for i, (x, y) in enumerate(path):
-            if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
+            if i == 0 or i == len(path) - 1:
                 result_grid[x][y] = "X"
+            else:
+                result_grid[x][y] = "•"
 
     return result_grid
 
 
-def create_solvable_maze(rows: int = 15, cols: int = 15, max_attempts: int = 10) -> List[List[Union[str, int]]]:
-    """Создает лабиринт с гарантированным путем от входа к выходу"""
-    for attempt in range(max_attempts):
-        grid = bin_tree_maze(rows, cols, random_exit=True)
-        _, path = solve_maze(grid)
-        if path and isinstance(path, list) and len(path) > 1:
-            return grid
-
-    grid = create_grid(rows, cols)
-
-    for y in range(1, cols - 1):
-        grid[rows // 2][y] = " "
-
-    grid[rows // 2][0] = "X"
-    grid[rows // 2][cols - 1] = "X"
-
-    return grid
-
-
 if __name__ == "__main__":
-    import pandas as pd
-
-    GRID = create_solvable_maze(15, 15)
-    print("Generated maze:")
+    print(pd.DataFrame(bin_tree_maze(15, 15)))
+    GRID = bin_tree_maze(15, 15)
     print(pd.DataFrame(GRID))
-
     _, PATH = solve_maze(GRID)
-    print("\nPath:", PATH)
-
-    if PATH:
-        MAZE = add_path_to_grid(GRID, PATH)
-        print("\nMaze with path:")
-        print(pd.DataFrame(MAZE))
-    else:
-        print("\nNo path found!")
+    MAZE = add_path_to_grid(GRID, PATH)
+    print(pd.DataFrame(MAZE))
