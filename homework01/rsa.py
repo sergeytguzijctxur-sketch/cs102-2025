@@ -4,12 +4,17 @@ from typing import List, Tuple
 
 def is_prime(n: int) -> bool:
     """
-    Tests to see if a number is prime.
+    Checks if a number is prime.
+
     >>> is_prime(2)
     True
-    >>> is_prime(11)
+    >>> is_prime(17)
     True
-    >>> is_prime(8)
+    >>> is_prime(1)
+    False
+    >>> is_prime(15)
+    False
+    >>> is_prime(49)
     False
     """
     if n <= 1:
