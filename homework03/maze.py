@@ -9,7 +9,8 @@ def create_grid(rows: int = 15, cols: int = 15) -> List[List[Union[str, int]]]:
 
 def remove_wall(grid: List[List[Union[str, int]]], coord: Tuple[int, int]) -> List[List[Union[str, int]]]:
     x, y = coord
-    grid[x][y] = " "
+    if grid[x][y] == "■":
+        grid[x][y] = " "
     return grid
 
 
@@ -36,33 +37,18 @@ def bin_tree_maze(rows: int = 15, cols: int = 15, random_exit: bool = True) -> L
 
         if directions:
             dx, dy = choice(directions)
-            grid = remove_wall(grid, (x + dx, y + dy))
+            remove_wall(grid, (x + dx, y + dy))
 
     if random_exit:
-        side_in = choice(["top", "bottom", "left", "right"])
-        if side_in == "top":
-            x_in, y_in = 0, randint(1, cols - 2)
-        elif side_in == "bottom":
-            x_in, y_in = rows - 1, randint(1, cols - 2)
-        elif side_in == "left":
-            x_in, y_in = randint(1, rows - 2), 0
-        else:
-            x_in, y_in = randint(1, rows - 2), cols - 1
-
-        side_out = choice([s for s in ["top", "bottom", "left", "right"] if s != side_in])
-        if side_out == "top":
-            x_out, y_out = 0, randint(1, cols - 2)
-        elif side_out == "bottom":
-            x_out, y_out = rows - 1, randint(1, cols - 2)
-        elif side_out == "left":
-            x_out, y_out = randint(1, rows - 2), 0
-        else:
-            x_out, y_out = randint(1, rows - 2), cols - 1
+        x_in, x_out = randint(0, rows - 1), randint(0, rows - 1)
+        y_in = randint(0, cols - 1) if x_in in (0, rows - 1) else choice((0, cols - 1))
+        y_out = randint(0, cols - 1) if x_out in (0, rows - 1) else choice((0, cols - 1))
     else:
         x_in, y_in = 0, cols - 2
         x_out, y_out = rows - 1, 1
 
-    grid[x_in][y_in], grid[x_out][y_out] = "X", "X"
+    grid[x_in][y_in] = "X"
+    grid[x_out][y_out] = "X"
 
     return grid
 
@@ -93,7 +79,7 @@ def make_step(grid: List[List[Union[str, int]]], k: int) -> List[List[Union[str,
                     if 0 <= ni < rows and 0 <= nj < cols:
                         if grid[ni][nj] == " " or grid[ni][nj] == "X":
                             new_grid[ni][nj] = k + 1
-                        elif grid[ni][nj] == 0:
+                        elif isinstance(grid[ni][nj], int) and grid[ni][nj] == 0:
                             new_grid[ni][nj] = k + 1
 
     return new_grid
@@ -109,7 +95,6 @@ def shortest_path(
     cols = len(grid[0])
     exit_x, exit_y = exit_coord
 
-    # Если выход окружен, возвращаем точку
     if encircled_exit(grid, exit_coord):
         return exit_coord
 
@@ -199,6 +184,11 @@ def solve_maze(
         if path and isinstance(path, list) and len(path) > 1:
             return grid, path
 
+    for exit_coord in exits:
+        path = shortest_path(grid, exit_coord)
+        if path and isinstance(path, tuple):
+            return grid, path
+
     return grid, None
 
 
@@ -224,7 +214,7 @@ def add_path_to_grid(
 
 
 if __name__ == "__main__":
-    import pandas as pd  # type: ignore
+    import pandas as pd
 
     print(pd.DataFrame(bin_tree_maze(15, 15)))
     GRID = bin_tree_maze(15, 15)
