@@ -105,12 +105,13 @@ def shortest_path(
     if not exit_coord:
         return None
 
-    if encircled_exit(grid, exit_coord):
-        return exit_coord
-
     rows = len(grid)
     cols = len(grid[0])
     exit_x, exit_y = exit_coord
+
+    # Если выход окружен, возвращаем точку
+    if encircled_exit(grid, exit_coord):
+        return exit_coord
 
     wave_grid = deepcopy(grid)
     for i in range(rows):
@@ -191,9 +192,6 @@ def solve_maze(
     exits = get_exits(grid)
 
     if len(exits) != 2:
-        return grid, None
-
-    if any(encircled_exit(grid, exit_coord) for exit_coord in exits):
         return grid, None
 
     for exit_coord in exits:
