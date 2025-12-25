@@ -1,139 +1,81 @@
-import random
+"""GUI for displaying and solving a binary tree maze."""
+
 import tkinter as tk
-from collections import deque
-from tkinter import messagebox, ttk
-from typing import List, Optional, Tuple
+from copy import deepcopy
+from tkinter import ttk
+from typing import List, cast
+
+from maze import bin_tree_maze, solve_maze
 
 
-def generate_maze(n: int, m: int) -> List[List[str]]:
-    """
-    Генерирует идеальный лабиринт размером n x m с использованием DFS.
-    Вход — (0, 1), выход — (n-1, m-2).
-    Стены обозначаются '■', проходы — ' '.
-    """
-    if n % 2 == 0:
-        n -= 1
-    if m % 2 == 0:
-        m -= 1
-
-    grid = [["■" for _ in range(m)] for _ in range(n)]
-
-    stack = [(1, 1)]
-    grid[1][1] = " "
-
-    directions = [(0, 2), (2, 0), (0, -2), (-2, 0)]
-
-    while stack:
-        x, y = stack[-1]
-        neighbors = []
-        for dx, dy in directions:
-            nx, ny = x + dx, y + dy
-            if 0 < nx < n - 1 and 0 < ny < m - 1 and grid[nx][ny] == "■":
-                neighbors.append((nx, ny))
-
-        if neighbors:
-            nx, ny = random.choice(neighbors)
-            grid[(x + nx) // 2][(y + ny) // 2] = " "
-            grid[nx][ny] = " "
-            stack.append((nx, ny))
-        else:
-            stack.pop()
-
-    grid[0][1] = " "
-    grid[n - 1][m - 2] = " "
-
-    return grid
+def draw_cell(canvas: tk.Canvas, x: int, y: int, color: str, size: int = 10) -> None:
+    """Draw a single cell on the canvas."""
+    x0 = x * size
+    y0 = y * size
+    x1 = x0 + size
+    y1 = y0 + size
+    canvas.create_rectangle(x0, y0, x1, y1, fill=color)
 
 
-def solve_maze(grid: List[List[str]]) -> Tuple[List[List[str]], List[Tuple[int, int]]]:
-    """
-    Возвращает (grid, path), где path — список координат от входа к выходу.
-    Вход предполагается в (0,1), выход — (n-1, m-2).
-    """
-    n, m = len(grid), len(grid[0])
-    start = (0, 1)
-    end = (n - 1, m - 2)
-
-    visited = [[False] * m for _ in range(n)]
-    parent: dict[Tuple[int, int], Tuple[int, int]] = {}
-    queue = deque([start])
-    visited[start[0]][start[1]] = True
-
-    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
-    while queue:
-        x, y = queue.popleft()
-        if (x, y) == end:
-            path = []
-            while (x, y) != start:
-                path.append((x, y))
-                x, y = parent[(x, y)]
-            path.append(start)
-            path.reverse()
-            return grid, path
-
-        for dx, dy in directions:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < n and 0 <= ny < m and not visited[nx][ny] and grid[nx][ny] == " ":
-                visited[nx][ny] = True
-                parent[(nx, ny)] = (x, y)
-                queue.append((nx, ny))
-
-    return grid, []
-
-
-def add_path_to_grid(grid: List[List[str]], path: List[Tuple[int, int]]) -> List[List[str]]:
-    new_grid = [row[:] for row in grid]  # копия
-    for x, y in path:
-        if new_grid[x][y] not in ["■"]:  # не перезаписываем стены
-            new_grid[x][y] = "X"
-    return new_grid
-
-
-def draw_cell(x, y, color, size: int = 10):
-    x *= size
-    y *= size
-    x1 = x + size
-    y1 = y + size
-    canvas.create_rectangle(x, y, x1, y1, fill=color)
-
-
-def draw_maze(grid: List[List[str]], size: int = 10):
+def draw_maze(canvas: tk.Canvas, grid: List[List[str]], size: int = 10) -> None:
+    """Draw the entire maze grid on the canvas."""
     for x, row in enumerate(grid):
         for y, cell in enumerate(row):
             if cell == " ":
-                color = "White"
+                color = "white"
             elif cell == "■":
                 color = "black"
             elif cell == "X":
-                color = "blue"
-            draw_cell(y, x, color, size)
+                color = "purple"
+            else:
+                color = "gray"
+            draw_cell(canvas, y, x, color, size)
 
 
-def show_solution():
-    maze, path = solve_maze(GRID)
-    maze = add_path_to_grid(GRID, path)
+def show_solution(canvas: tk.Canvas, grid: List[List[str]], n: int, m: int, cell_size: int) -> None:
+    """Regenerate and display a solvable maze with solution path."""
+    current_grid = deepcopy(grid)
+    _, path = solve_maze(cast(List[List[str | int]], current_grid))
+
+    while path is None:
+        raw_maze = bin_tree_maze(n, m)
+        grid = [[str(cell) for cell in row] for row in raw_maze]
+        current_grid = deepcopy(grid)
+        _, path = solve_maze(cast(List[List[str | int]], current_grid))
+
+    if path is not None and isinstance(path, tuple):
+        path = [path]
+
+    maze_with_path = deepcopy(grid)
     if path:
-        draw_maze(maze, CELL_SIZE)
-    else:
-        tk.messagebox.showinfo("Message", "No solutions")
+        for i, j in path:
+            maze_with_path[i][j] = "X"
+
+    canvas.delete("all")
+    draw_maze(canvas, maze_with_path, cell_size)
 
 
-if __name__ == "__main__":
-    global GRID, CELL_SIZE
+def main() -> None:
+    """Main entry point for the maze GUI application."""
     N, M = 51, 77
-
     CELL_SIZE = 10
-    GRID = generate_maze(N, M)
+
+    raw_maze = bin_tree_maze(N, M)
+    grid = [[str(cell) for cell in row] for row in raw_maze]
 
     window = tk.Tk()
     window.title("Maze")
-    window.geometry("%dx%d" % (M * CELL_SIZE + 100, N * CELL_SIZE + 100))
+    window.geometry(f"{M * CELL_SIZE + 100}x{N * CELL_SIZE + 100}")
 
     canvas = tk.Canvas(window, width=M * CELL_SIZE, height=N * CELL_SIZE)
     canvas.pack()
 
-    draw_maze(GRID, CELL_SIZE)
-    ttk.Button(window, text="Solve", command=show_solution).pack(pady=20)
+    draw_maze(canvas, grid, CELL_SIZE)
+
+    ttk.Button(window, text="Solve", command=lambda: show_solution(canvas, grid, N, M, CELL_SIZE)).pack(pady=20)
 
     window.mainloop()
+
+
+if __name__ == "__main__":
+    main()
