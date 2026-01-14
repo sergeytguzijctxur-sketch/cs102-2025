@@ -1,5 +1,4 @@
-"""
-Графический интерфейс для игры "Жизнь" Конвея на Pygame.
+"""Графический интерфейс для игры "Жизнь" Конвея на Pygame.
 Предоставляет визуализацию, интерактивное управление и различные режимы отображения.
 """
 
@@ -7,7 +6,7 @@ import random
 from pathlib import Path
 
 import pygame
-from pygame import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_l, K_p, K_q, K_r, K_s
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, QUIT, K_l, K_p, K_q, K_r, K_s  # pylint: disable=no-name-in-module
 
 from life import GameOfLife
 from ui import UI
