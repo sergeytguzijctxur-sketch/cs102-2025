@@ -13,7 +13,7 @@ from life import GameOfLife
 from ui import UI
 
 
-class GUI(UI):  # pylint: disable=too-many-instance-attributes
+class GUI(UI):
     """
     Графический интерфейс для игры "Жизнь".
 
