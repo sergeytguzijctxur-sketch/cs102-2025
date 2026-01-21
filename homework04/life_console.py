@@ -5,47 +5,67 @@ from ui import UI
 
 
 class Console(UI):
-    def __init__(self, life: GameOfLife) -> None:
-        super().__init__(life)
+    def __init__(self, life_instance: GameOfLife) -> None:
+        super().__init__(life_instance)
 
-    def draw_borders(self, screen) -> None:
-        """Отобразить рамку."""
-        screen.addstr(0, 0, "+" + "-" * self.life.cols + "+")
-        screen.addstr(self.life.rows + 1, 0, "+" + "-" * self.life.cols + "+")
-        for i in range(1, self.life.rows + 1):
-            screen.addch(i, 0, ord("|"))
-            screen.addch(i, self.life.cols + 1, ord("|"))
+    def draw_borders(self, display) -> None:
+        num_rows, num_cols = self.life.rows, self.life.cols
+        top_bottom_char = "-"
+        side_char = "|"
 
-    def draw_grid(self, screen) -> None:
-        """Отобразить состояние клеток."""
-        for row in range(self.life.rows):
-            for col in range(self.life.cols):
-                char = "*" if self.life.curr_generation[row][col] else " "
-                screen.addch(row + 1, col + 1, ord(char))
+        for col_idx in range(1, num_cols - 1):
+            display.addstr(0, col_idx, top_bottom_char)
+            display.addstr(num_rows - 1, col_idx, top_bottom_char)
+
+        for row_idx in range(1, num_rows - 1):
+            display.addstr(row_idx, 0, side_char)
+            display.addstr(row_idx, num_cols - 1, side_char)
+
+    def draw_grid(self, display) -> None:
+        display.clear()
+        max_y, max_x = display.getmaxyx()
+
+        for y, row_data in enumerate(self.life.curr_generation):
+            if y >= max_y - 1:
+                break
+            for x, cell_state in enumerate(row_data):
+                if x >= max_x - 1:
+                    break
+                display.addch(y, x, "1" if cell_state else " ")
+
+        display.refresh()
 
     def run(self) -> None:
-        screen = curses.initscr()
+        terminal = curses.initscr()
+        curses.endwin()  # ← оставлено как в оригинале
+        curses.noecho()
+        curses.cbreak()
         curses.curs_set(0)
-        screen.clear()
-        self.draw_borders(screen)
-        self.draw_grid(screen)
-        screen.refresh()
-        screen.nodelay(True)
-        screen.timeout(200)
-        while True:
-            key = screen.getch()
-            if key != -1 and chr(key) == "q":
-                break
-            if not self.life.is_changing or self.life.is_max_generations_exceeded:
-                break
-            self.life.step()
-            screen.clear()
-            self.draw_borders(screen)
-            self.draw_grid(screen)
-            screen.refresh()
+        terminal.nodelay(True)
+
+        try:
+            while self.life.is_changing and not self.life.is_max_generations_exceeded:
+                terminal.clear()
+                self.draw_borders(terminal)
+                self.draw_grid(terminal)
+                terminal.refresh()
+
+                pressed_key = terminal.getch()
+                if pressed_key == ord("q"):
+                    break
+
+                self.life.step()
+                curses.napms(150)
+
+        finally:
+            curses.nocbreak()
+            curses.echo()
+            curses.endwin()
+
         curses.endwin()
 
 
-game = GameOfLife(size=(20, 100), randomize=True, max_generations=10000)
-ui = Console(game)
-ui.run()
+if __name__ == "__main__":
+    simulation = GameOfLife(size=(10, 40), randomize=True)
+    console_interface = Console(simulation)
+    console_interface.run()

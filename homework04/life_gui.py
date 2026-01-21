@@ -1,131 +1,86 @@
-"""Графический интерфейс для игры "Жизнь" Конвея на Pygame.
-Предоставляет визуализацию, интерактивное управление и различные режимы отображения.
-"""
+"""Графический интерфейс для симуляции 'Жизнь' с использованием Pygame."""
 
-import random
-from pathlib import Path
+# pylint: disable=no-member
 
 import pygame
-from pygame.locals import *
 
 from life import GameOfLife
 from ui import UI
 
 
 class GUI(UI):
-    """
-    Графический интерфейс для игры "Жизнь".
-
-    Атрибуты:
-        cell_size: Размер ячейки в пикселях
-        width: Ширина экрана в пикселях
-        height: Высота экрана в пикселях
-        screen: Поверхность отображения Pygame
-        speed: Скорость игры (кадров в секунду)
-        paused: Приостановлена ли симуляция
-        random_color: Использовать случайные цвета
-    """
+    """Класс для отображения игры 'Жизнь' в графическом окне."""
 
     def __init__(self, life: GameOfLife, cell_size: int = 10, speed: int = 10) -> None:
         super().__init__(life)
         self.cell_size = cell_size
-
-        self.width = self.cell_size * self.life.rows
-        self.height = self.cell_size * self.life.cols
-        self.screen_size = self.width, self.height
-        self.screen = pygame.display.set_mode(self.screen_size)
-
-        self.cell_width = life.rows
-        self.cell_height = life.cols
-
         self.speed = speed
+        self.width = life.cols * cell_size
+        self.height = life.rows * cell_size
+        self.screen = pygame.display.set_mode((self.width, self.height))
         self.paused = False
-        self.random_color = False
 
     def draw_lines(self) -> None:
-        """Отрисовка сетки на экране."""
-        for x in range(0, self.width, self.cell_size):
-            pygame.draw.line(self.screen, pygame.Color("black"), (x, 0), (x, self.height))
-        for y in range(0, self.height, self.cell_size):
-            pygame.draw.line(self.screen, pygame.Color("black"), (0, y), (self.width, y))
+        black = pygame.Color("black")
+        line_thickness = 1
+        for x_pos in range(0, self.width + 1, self.cell_size):
+            pygame.draw.line(self.screen, black, (x_pos, 0), (x_pos, self.height), line_thickness)
+        for y_pos in range(0, self.height + 1, self.cell_size):
+            pygame.draw.line(self.screen, black, (0, y_pos), (self.width, y_pos), line_thickness)
 
-    def draw_grid(self, color="purple") -> None:
-        """
-        Отрисовка игрового поля.
+    def draw_grid(self) -> None:
+        for r in range(self.life.rows):
+            for c in range(self.life.cols):
+                cell_alive = self.life.curr_generation[r][c]
+                fill_color = pygame.Color("green") if cell_alive else pygame.Color("white")
+                rect_x = c * self.cell_size
+                rect_y = r * self.cell_size
+                pygame.draw.rect(self.screen, fill_color, (rect_x, rect_y, self.cell_size, self.cell_size))
 
-        Args:
-            color: Цвет живых клеток (по умолчанию фиолетовый)
-        """
-        for row in range(self.cell_height):
-            for col in range(self.cell_width):
-                x = col * self.cell_size
-                y = row * self.cell_size
-                if self.life.curr_generation[row][col] == 1:
-                    pygame.draw.rect(
-                        self.screen,
-                        pygame.Color(color),
-                        (x, y, self.cell_size, self.cell_size),
-                    )
-                else:
-                    pygame.draw.rect(
-                        self.screen,
-                        pygame.Color("white"),
-                        (x, y, self.cell_size, self.cell_size),
-                    )
-
-    def run(self) -> None:  # pylint: disable=too-many-branches
-        """Основной цикл игры и обработка событий."""
-        pygame.init()  # pylint: disable=no-member
+    def run(self) -> None:
         clock = pygame.time.Clock()
-        pygame.display.set_caption("Game of Life")
-        self.screen.fill(pygame.Color("white"))
-        running = True
+        active = True
 
-        while running:
+        while active:
             for event in pygame.event.get():
-                if event.type == QUIT:
-                    running = False
-                elif event.type == KEYDOWN:
-                    if event.key == K_q:
-                        running = False
-                    elif event.key == K_p:
+                if event.type == pygame.QUIT:
+                    active = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
                         self.paused = not self.paused
-                    elif event.key == K_s:
-                        self.life.save(Path("save.txt"))
-                    elif event.key == K_l:
-                        self.life = GameOfLife.from_file(Path("save.txt"))
-                    elif event.key == K_r:
-                        self.random_color = not self.random_color
-                elif event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1 and self.paused:
-                        x, y = event.pos
-                        row = y // self.cell_size
-                        col = x // self.cell_size
-                        self.life.curr_generation[row][col] = 1 - self.life.curr_generation[row][col]
+                        print(f"Пауза: {'включена' if self.paused else 'выключена'}")
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.paused and event.button == 1:
+                        mouse_x, mouse_y = event.pos
+                        col_index = mouse_x // self.cell_size
+                        row_index = mouse_y // self.cell_size
+                        if 0 <= row_index < self.life.rows and 0 <= col_index < self.life.cols:
+                            current_state = self.life.curr_generation[row_index][col_index]
+                            self.life.curr_generation[row_index][col_index] = 1 - current_state
+                            action = "оживили" if current_state == 0 else "убили"
+                            print(f"{action.capitalize()} клетку ({row_index}, {col_index})")
 
+            self.screen.fill(pygame.Color("white"))
+            self.draw_grid()
             self.draw_lines()
-
-            if self.random_color:
-                self.draw_grid(
-                    color=(
-                        random.randint(0, 255),
-                        random.randint(0, 255),
-                        random.randint(0, 255),
-                    )
-                )
-            else:
-                self.draw_grid()
 
             if not self.paused:
                 self.life.step()
+                if self.life.is_max_generations_exceeded:
+                    print(f"Игра завершена: достигнуто максимальное число поколений ({self.life.max_generations})")
+                    active = False
+                elif not self.life.is_changing:
+                    print("Игра завершена: конфигурация стабилизировалась.")
+                    active = False
 
             pygame.display.flip()
             clock.tick(self.speed)
 
-        pygame.quit()  # pylint: disable=no-member
+        pygame.quit()
+        print("Симуляция остановлена.")
 
 
 if __name__ == "__main__":
-    game = GameOfLife(size=(100, 100))
-    gui = GUI(game)
-    gui.run()
+    initial_game = GameOfLife(size=(50, 50))
+    visual_interface = GUI(initial_game)
+    visual_interface.run()
