@@ -62,7 +62,10 @@ class GameOfLife:
             for col_idx, is_alive in enumerate(row):
                 cell_color = pygame.Color("green") if is_alive else pygame.Color("white")
                 rect_area = pygame.Rect(
-                    col_idx * self.cell_size, row_idx * self.cell_size, self.cell_size, self.cell_size
+                    col_idx * self.cell_size,
+                    row_idx * self.cell_size,
+                    self.cell_size,
+                    self.cell_size
                 )
                 pygame.draw.rect(self.screen, cell_color, rect_area)
 
@@ -78,12 +81,7 @@ class GameOfLife:
                 if 0 <= nr < self.rows and 0 <= nc < self.cols:
                     neighbor_list.append(self.grid[nr][nc])
 
-        Returns
-        ----------
-        out : Cells
-            Список соседних клеток, в котором каждая позиция – 0 или 1.
-        """
-        pass
+        return neighbor_list
 
     def get_next_generation(self) -> Grid:
         next_gen = self.create_grid(randomize=False)
