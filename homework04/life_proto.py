@@ -62,10 +62,7 @@ class GameOfLife:
             for col_idx, is_alive in enumerate(row):
                 cell_color = pygame.Color("green") if is_alive else pygame.Color("white")
                 rect_area = pygame.Rect(
-                    col_idx * self.cell_size,
-                    row_idx * self.cell_size,
-                    self.cell_size,
-                    self.cell_size
+                    col_idx * self.cell_size, row_idx * self.cell_size, self.cell_size, self.cell_size
                 )
                 pygame.draw.rect(self.screen, cell_color, rect_area)
 
